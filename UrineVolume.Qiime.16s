@@ -1,4 +1,4 @@
-###reanalysis of urine volume data with filtering mitochondrial dna and unassigned and eukaryotes. 
+###analysis of urine volume data. 
 ##urine volume samples are subset of urine samples in the CUP study. 
 qiime dada2 denoise-paired \
 --i-demultiplexed-seqs demux.qza \
