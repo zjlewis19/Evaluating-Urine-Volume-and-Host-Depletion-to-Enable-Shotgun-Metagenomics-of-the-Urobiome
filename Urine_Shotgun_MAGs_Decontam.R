@@ -1,4 +1,4 @@
-##decontam on the MAG abundance table for uricomplete. 
+##decontam on the MAG abundance table from IDI-GEMS
 library(phyloseq)
 library(tidyverse)
 library(readxl)
