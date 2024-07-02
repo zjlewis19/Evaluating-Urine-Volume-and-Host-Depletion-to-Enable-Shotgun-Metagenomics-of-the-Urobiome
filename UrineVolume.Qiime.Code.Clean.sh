@@ -1,0 +1,129 @@
+###reanalysis of urine volume data with filtering mitochondrial dna and unassigned and eukaryotes. 
+##urine volume samples are subset of urine samples in the CUP study. 
+qiime dada2 denoise-paired \
+--i-demultiplexed-seqs demux.qza \
+--p-trim-left-f 5 \
+--p-trim-left-r 5 \
+--p-trunc-len-f 225 \
+--p-trunc-len-r 220 \
+--o-table table.qza \
+--o-representative-sequences rep-seqs.qza \
+--o-denoising-stats denoising-stats.qza
+
+qiime feature-table filter-samples \
+    --i-table table.qza \
+    --m-metadata-file CUP_metadata_ALL_V6.tsv \
+    --p-where '[Study]="HowLow"' \
+    --o-filtered-table howlow.filtered-table2.qza
+
+qiime feature-table filter-samples \
+--i-table howlow.filtered-table2.qza \
+--m-metadata-file urinevolume.metadata.v2.txt \
+--p-where '[sample_type]="Urine_volume" AND NOT [#SampleID]="ArB1_3"' \
+--o-filtered-table table-no-negatives.qza
+
+##generate taxonomy
+qiime feature-classifier classify-sklearn \
+--i-classifier silva-138.1-ssu-nr99-515f-806r-classifier.qza \
+--i-reads rep-seqs.qza \
+--o-classification taxonomy.qza
+
+##filter rep-seqs to only sequences in the table, reduce alignment burden
+qiime feature-table filter-seqs \
+--i-data rep-seqs.qza.zip \
+--i-table table-no-negatives.qza \
+--o-filtered-data filtered-seqs.qza
+
+qiime phylogeny align-to-tree-mafft-fasttree \
+--i-sequences filtered-seqs.qza \
+--o-alignment aligned-rep-seqs.qza \
+--o-masked-alignment masked-aligned-rep-seqs.qza \
+--o-tree unrooted-tree.qza \
+--o-rooted-tree rooted-tree.qza
+
+
+#filter unassigned, mitochondrial, "eukaryotic" sequences from feature table
+qiime taxa filter-table \
+--i-table table-no-negatives.qza \
+--i-taxonomy taxonomy.qza.zip \
+--p-exclude Unassigned,Eukaryota,mitochondria \
+--o-filtered-table Reanalysis/taxa-filtered-table.qza
+
+qiime feature-table summarize \
+--i-table Reanalysis/taxa-filtered-table.qza \
+--m-sample-metadata-file urinevolume.metadata.v2.txt \
+--o-visualization Reanalysis/taxa-filtered-table.qzv
+
+qiime taxa barplot \
+--i-table Reanalysis/taxa-filtered-table.qza \
+--i-taxonomy taxonomy.qza.zip \
+--m-metadata-file urinevolume.metadata.v2.txt \
+--o-visualization Reanalysis/taxa-filtered-barplot.qzv
+
+qiime taxa barplot \
+--i-table initialSummaries/no-unassigned-table.qza \
+--i-taxonomy taxonomy.qza.zip \
+--m-metadata-file urinevolume.metadata.v2.txt \
+--o-visualization Reanalysis/old-no-unassigned-barplot.qzv
+
+
+##diversity metrics including all samples 
+qiime diversity core-metrics-phylogenetic \
+--i-phylogeny rooted-tree.qza \
+--i-table Reanalysis/taxa-filtered-table.qza \
+--m-metadata-file urinevolume.metadata.v2.txt \
+--p-sampling-depth 1593 \
+--output-dir Reanalysis/core-metrics-1593
+
+##doing a permdisp on 3,5mL vs 1mL and smaller
+qiime diversity beta-group-significance \
+--i-distance-matrix Reanalysis/core-metrics-1593/bray_curtis_distance_matrix.qza \
+--m-metadata-file urinevolume.metadata.v2.txt \
+--m-metadata-column Volume_High_Low \
+--o-visualization Reanalysis/core-metrics-1593/bray_curtis_permdisp.qzv \
+--p-method permdisp \
+--p-pairwise
+
+##permanova
+qiime diversity beta-group-significance \
+--i-distance-matrix Reanalysis/core-metrics-1593/bray_curtis_distance_matrix.qza \
+--m-metadata-file urinevolume.metadata.v2.txt \
+--m-metadata-column Volume_High_Low \
+--o-visualization Reanalysis/core-metrics-1593/bray_curtis_permdisp.qzv \
+--p-method permanova \
+--p-pairwise
+
+##jaccard permdisp
+qiime diversity beta-group-significance \
+--i-distance-matrix Reanalysis/core-metrics-1593/jaccard_distance_matrix.qza \
+--m-metadata-file urinevolume.metadata.v2.txt \
+--m-metadata-column Volume_High_Low \
+--o-visualization Reanalysis/core-metrics-1593/jaccard_permdisp.qzv \
+--p-method permdisp \
+--p-pairwise
+
+
+##alpha testing 
+ qiime diversity alpha-group-significance \
+--i-alpha-diversity Reanalysis/core-metrics-1593/shannon_vector.qza \
+--m-metadata-file urinevolume.metadata.v2.txt \
+--o-visualization Reanalysis/core-metrics-1593/shannon_significance.qzv
+ qiime diversity alpha-group-significance \
+--i-alpha-diversity Reanalysis/core-metrics-1593/observed_features_vector.qza \
+--m-metadata-file urinevolume.metadata.v2.txt \
+--o-visualization Reanalysis/core-metrics-1593/Observed_features_significance.qzv
+
+##kruskal wallis not the appropriate test here, switching to prism for friedman. 
+##all results the same with slighly different p values. phew. 
+##converting to TSV to remake figures from R. 
+biom convert \
+-i taxa-filtered-table.biom \
+-o taxa-filtered-table.txt \
+--to-tsv
+
+##rarefaction - analyses performed at appropriate depth. 
+qiime diversity alpha-rarefaction \
+    --i-table taxa-filtered-table.qza \
+    --p-max-depth 29988 \
+    --m-metadata-file urinevolume.metadata.rean.v4.txt \
+    --o-visualization taxa-filtered-rarefaction.qzv
