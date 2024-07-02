@@ -1,4 +1,4 @@
-##reanalysis of Urine Volume Data with better filtering (mitochondria, eukarya, unassigned filtered)
+##Analysis of Urine Volume Data - solely figure generation. Stats performed in QIIME on normalized data.
 library(phyloseq)
 library(vegan)
 library(ggplot2)
