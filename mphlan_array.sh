@@ -1,3 +1,4 @@
+###code for generating MetaPhlan4.0 species-level OTU table. 
 #!/bin/bash
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --account=PAS1331
