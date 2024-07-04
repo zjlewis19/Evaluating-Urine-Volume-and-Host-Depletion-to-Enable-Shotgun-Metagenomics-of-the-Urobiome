@@ -16,6 +16,10 @@ qiime feature-table filter-samples \
     --p-where '[Study]="HowLow"' \
     --o-filtered-table howlow.filtered-table2.qza
 
+
+##exported to decontam here 
+##re-imported to qiime
+
 qiime feature-table filter-samples \
 --i-table howlow.filtered-table2.qza \
 --m-metadata-file urinevolume.metadata.v2.txt \
